@@ -1,0 +1,9 @@
+[project]
+name = "clerk"
+version = "0.1.0"
+description = "clerk is that front-desk lady at any organization, but my clerk is a local RAG that I built from scratch."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.34.2",
+]
