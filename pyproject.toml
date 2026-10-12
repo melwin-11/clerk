@@ -5,5 +5,9 @@ description = "clerk is that front-desk lady at any organization, but my clerk i
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pandas>=2.3.3",
+    "pymupdf>=1.28.2",
     "requests>=2.34.2",
+    "spacy>=3.8.16",
+    "tqdm>=4.70.1",
 ]
