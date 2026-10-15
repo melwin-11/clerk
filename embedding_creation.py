@@ -45,7 +45,6 @@ def main():
     for item, embedding in zip(filtered_chunks, embeddings):
         item['embedding'] = embedding.cpu().numpy()
 
-    # Save embeddings to a CSV file
     print("Saving embeddings to file...")
 
     text_chunks_and_embeddings_df = pd.DataFrame(filtered_chunks)
