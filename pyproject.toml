@@ -13,7 +13,10 @@ dependencies = [
     "tqdm>=4.70.1",
     "torch==2.11.0",
     "torchvision==0.26.0",
-    "torchaudio==2.11.0"
+    "torchaudio==2.11.0",
+    "ollama>=0.6.3",
+    "discord-py>=2.7.1",
+    "python-dotenv>=1.2.4",
 ]
 [tool.uv.sources]
 torch = { index = "pytorch-cu126" }
