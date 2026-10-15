@@ -9,6 +9,9 @@ from config import (
     embedding_model_name,
     ollama_host,
     ollama_model,
+    ollama_num_ctx,
+    ollama_num_gpu,
+    ollama_temperature,
     sqlite_db_path,
 )
 from database import load_all_embeddings
@@ -21,9 +24,9 @@ class RAGEngine:
         embedding_model_name: str = embedding_model_name,
         ollama_host: str = ollama_host,
         ollama_model: str = ollama_model,
-        num_gpu: int = int(os.getenv("OLLAMA_NUM_GPU", "0")),
-        num_ctx: int = int(os.getenv("OLLAMA_NUM_CTX", "2048")),
-        temperature: float = float(os.getenv("OLLAMA_TEMPERATURE", "0.3")),
+        num_gpu: Optional[int] = ollama_num_gpu,
+        num_ctx: int = ollama_num_ctx,
+        temperature: float = ollama_temperature,
     ):
         self.db_path = db_path
         self.embedding_model_name = embedding_model_name
@@ -140,11 +143,12 @@ Answer:"""
         prompt = self.format_prompt(query=user_query, context_items=context_items)
 
         print(f"[INFO] Generating response from Ollama model '{self.ollama_model}'...")
-        options = {
-            "num_gpu": self.num_gpu,
+        options: Dict[str, Any] = {
             "num_ctx": self.num_ctx,
             "temperature": self.temperature,
         }
+        if self.num_gpu is not None:
+            options["num_gpu"] = self.num_gpu
 
         response = self.ollama_client.chat(
             model=self.ollama_model,

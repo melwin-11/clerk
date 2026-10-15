@@ -14,7 +14,7 @@ sqlite_db_path = os.getenv("SQLITE_DB_PATH", "data/clerk_rag.db")
 
 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
-ollama_num_gpu = int(os.getenv("OLLAMA_NUM_GPU", "0"))
+ollama_num_gpu = int(os.getenv("OLLAMA_NUM_GPU")) if os.getenv("OLLAMA_NUM_GPU") else None
 ollama_num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))
 ollama_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.3"))
 
