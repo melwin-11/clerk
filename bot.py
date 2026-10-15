@@ -127,6 +127,21 @@ class ClerkDiscordBot(discord.Client):
                 )
             return
 
+        # 2. Handle /status or /help commands
+        if content.lower() in ("/status", "/help"):
+            doc_count = len(self.rag_engine.chunks_meta)
+            await message.channel.send(
+                f"ℹ️ **Clerk Local-RAG Status**\n"
+                f"• Model: `{self.rag_engine.ollama_model}`\n"
+                f"• Embedding: `{self.rag_engine.embedding_model_name}`\n"
+                f"• Chunks Loaded: `{doc_count}`\n"
+                f"• Active Session: `{'Yes' if user_id in self.active_sessions else 'No'}`\n\n"
+                f"**Usage**:\n"
+                f"• `/query <question>` - Ask a question or start conversation\n"
+                f"• `/stop` - End active session"
+            )
+            return
+
         # 2. Handle /query trigger
         if content.lower().startswith("/query"):
             # Mark session as active
