@@ -3,8 +3,18 @@ import os
 from typing import Dict, List, Optional, Set
 
 import discord
-from config import discord_channel_id, discord_token
-from rag import RAGEngine
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+try:
+    from src.config import discord_channel_id, discord_token
+    from src.rag.rag import RAGEngine
+except ImportError:
+    from config import discord_channel_id, discord_token
+    from rag import RAGEngine
 
 
 def split_message_for_discord(text: str, max_length: int = 1900) -> List[str]:
@@ -21,7 +31,6 @@ def split_message_for_discord(text: str, max_length: int = 1900) -> List[str]:
             if current_chunk:
                 chunks.append(current_chunk.strip())
                 current_chunk = ""
-            # If a single line is longer than max_length, force split it
             while len(line) > max_length:
                 chunks.append(line[:max_length])
                 line = line[max_length:]
@@ -58,7 +67,6 @@ class ClerkDiscordBot(discord.Client):
 
         self.rag_engine = rag_engine or RAGEngine()
         self.target_channel_id = int(target_channel_id) if target_channel_id else None
-        # Track active user IDs currently in an interactive query session
         self.active_sessions: Set[int] = set()
 
     async def on_ready(self):
@@ -80,7 +88,6 @@ class ClerkDiscordBot(discord.Client):
         answer = result.get("answer", "No answer generated.")
         context_items = result.get("context_items", [])
 
-        # Build citation footer
         sources_text = ""
         if context_items:
             sources_lines = []
@@ -103,18 +110,15 @@ class ClerkDiscordBot(discord.Client):
             await channel.send(chunk)
 
     async def on_message(self, message: discord.Message):
-        # Ignore messages sent by the bot itself
         if message.author == self.user:
             return
 
-        # Restrict to specified channel if configured
         if self.target_channel_id and message.channel.id != self.target_channel_id:
             return
 
         content = message.content.strip()
         user_id = message.author.id
 
-        # 1. Handle /stop command
         if content.lower() == "/stop":
             if user_id in self.active_sessions:
                 self.active_sessions.remove(user_id)
@@ -127,7 +131,6 @@ class ClerkDiscordBot(discord.Client):
                 )
             return
 
-        # 2. Handle /status or /help commands
         if content.lower() in ("/status", "/help"):
             doc_count = len(self.rag_engine.chunks_meta)
             await message.channel.send(
@@ -142,9 +145,7 @@ class ClerkDiscordBot(discord.Client):
             )
             return
 
-        # 2. Handle /query trigger
         if content.lower().startswith("/query"):
-            # Mark session as active
             self.active_sessions.add(user_id)
             query_prompt = content[len("/query"):].strip()
 
@@ -155,7 +156,6 @@ class ClerkDiscordBot(discord.Client):
                 )
                 return
 
-            # Execute RAG query with typing indicator
             async with message.channel.typing():
                 loop = asyncio.get_running_loop()
                 try:
@@ -172,7 +172,6 @@ class ClerkDiscordBot(discord.Client):
                     )
             return
 
-        # 3. Handle messages within an active session
         if user_id in self.active_sessions:
             async with message.channel.typing():
                 loop = asyncio.get_running_loop()

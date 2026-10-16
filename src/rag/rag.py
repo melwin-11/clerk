@@ -4,18 +4,38 @@ import torch
 from sentence_transformers import SentenceTransformer, util
 import ollama
 
-from config import (
-    embedding_max_seq_length,
-    embedding_model_name,
-    ollama_host,
-    ollama_model,
-    ollama_num_ctx,
-    ollama_num_gpu,
-    ollama_temperature,
-    rag_embedding_device,
-    sqlite_db_path,
-)
-from database import load_all_embeddings
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+try:
+    from src.config import (
+        embedding_max_seq_length,
+        embedding_model_name,
+        ollama_host,
+        ollama_model,
+        ollama_num_ctx,
+        ollama_num_gpu,
+        ollama_temperature,
+        rag_embedding_device,
+        sqlite_db_path,
+    )
+    from src.storage.database import load_all_embeddings
+except ImportError:
+    from config import (
+        embedding_max_seq_length,
+        embedding_model_name,
+        ollama_host,
+        ollama_model,
+        ollama_num_ctx,
+        ollama_num_gpu,
+        ollama_temperature,
+        rag_embedding_device,
+        sqlite_db_path,
+    )
+    from database import load_all_embeddings
 
 
 class RAGEngine:
