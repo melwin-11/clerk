@@ -68,6 +68,9 @@ class ClerkDiscordBot(discord.Client):
         self.rag_engine = rag_engine or RAGEngine()
         self.target_channel_id = int(target_channel_id) if target_channel_id else None
         self.active_sessions: Set[int] = set()
+        # Tracks recently processed message IDs to prevent duplicate responses
+        # when multiple bot instances are accidentally started
+        self._processed_ids: Set[int] = set()
 
     async def on_ready(self):
         print(f"[INFO] Discord bot logged in as {self.user} (ID: {self.user.id})")
@@ -110,8 +113,17 @@ class ClerkDiscordBot(discord.Client):
             await channel.send(chunk)
 
     async def on_message(self, message: discord.Message):
+        # Ignore messages sent by the bot itself
         if message.author == self.user:
             return
+
+        # Deduplicate: skip if this exact message ID was already handled
+        if message.id in self._processed_ids:
+            return
+        self._processed_ids.add(message.id)
+        # Cap the set size to avoid unbounded memory growth
+        if len(self._processed_ids) > 1000:
+            self._processed_ids.pop()
 
         if self.target_channel_id and message.channel.id != self.target_channel_id:
             return
