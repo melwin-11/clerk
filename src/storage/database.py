@@ -4,9 +4,19 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import numpy as np
 import torch
-from config import sqlite_db_path
+
+try:
+    from src.config import sqlite_db_path
+except ImportError:
+    from config import sqlite_db_path
 
 
 def compute_file_hash(file_path: str) -> str:
@@ -106,7 +116,6 @@ def save_chunks_and_embeddings(
     with get_connection(db_path) as conn:
         cursor = conn.cursor()
 
-        # Clean existing entries for this file_path if any
         cursor.execute("DELETE FROM chunks WHERE file_path = ?", (file_path,))
         cursor.execute("DELETE FROM document_meta WHERE file_path = ?", (file_path,))
 

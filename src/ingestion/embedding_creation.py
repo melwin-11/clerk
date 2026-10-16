@@ -3,16 +3,34 @@ from typing import Any, Dict, List, Optional
 import torch
 from sentence_transformers import SentenceTransformer
 
-from chunking import split_sentences
-from config import (
-    embedding_max_seq_length,
-    embedding_model_name,
-    min_chunk_tokens,
-    pdf_path,
-    sqlite_db_path,
-)
-from database import is_document_processed, save_chunks_and_embeddings
-from extract_text import open_and_read_pdf
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+try:
+    from src.config import (
+        embedding_max_seq_length,
+        embedding_model_name,
+        min_chunk_tokens,
+        pdf_path,
+        sqlite_db_path,
+    )
+    from src.ingestion.chunking import split_sentences
+    from src.ingestion.extract_text import open_and_read_pdf
+    from src.storage.database import is_document_processed, save_chunks_and_embeddings
+except ImportError:
+    from config import (
+        embedding_max_seq_length,
+        embedding_model_name,
+        min_chunk_tokens,
+        pdf_path,
+        sqlite_db_path,
+    )
+    from chunking import split_sentences
+    from extract_text import open_and_read_pdf
+    from database import is_document_processed, save_chunks_and_embeddings
 
 
 def get_embedding_model(
@@ -50,7 +68,6 @@ def truncate_chunks_if_exceeds(
         )
         if len(token_ids) > max_length:
             truncated_count += 1
-            # Truncate to maximum allowed tokens
             truncated_token_ids = token_ids[:max_length]
             item["sentence_chunk"] = tokenizer.decode(
                 truncated_token_ids,
@@ -97,7 +114,6 @@ def process_and_embed_document(
 
     embedding_model = get_embedding_model()
 
-    # Safety truncation for all-mpnet sequence limit
     filtered_chunks = truncate_chunks_if_exceeds(
         chunks=filtered_chunks,
         model=embedding_model,

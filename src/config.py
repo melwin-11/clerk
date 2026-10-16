@@ -12,6 +12,8 @@ embedding_max_seq_length = int(os.getenv("EMBEDDING_MAX_SEQ_LENGTH", "384"))
 
 sqlite_db_path = os.getenv("SQLITE_DB_PATH", "data/clerk_rag.db")
 
+rag_embedding_device = os.getenv("RAG_EMBEDDING_DEVICE", "cpu")
+
 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
 ollama_num_gpu = int(os.getenv("OLLAMA_NUM_GPU")) if os.getenv("OLLAMA_NUM_GPU") else None

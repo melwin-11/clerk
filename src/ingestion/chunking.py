@@ -4,8 +4,18 @@ from tqdm.auto import tqdm
 import re
 import pandas as pd
 
-from config import pdf_path, sentence_chunk_size
-from extract_text import open_and_read_pdf
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+try:
+    from src.config import pdf_path, sentence_chunk_size
+    from src.ingestion.extract_text import open_and_read_pdf
+except ImportError:
+    from config import pdf_path, sentence_chunk_size
+    from extract_text import open_and_read_pdf
 
 nlp = English()
 nlp.add_pipe("sentencizer")
