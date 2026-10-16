@@ -12,7 +12,6 @@ embedding_max_seq_length = int(os.getenv("EMBEDDING_MAX_SEQ_LENGTH", "384"))
 
 sqlite_db_path = os.getenv("SQLITE_DB_PATH", "data/clerk_rag.db")
 
-# Device Settings (Run query embedding on CPU to reserve 100% GPU VRAM for Ollama)
 rag_embedding_device = os.getenv("RAG_EMBEDDING_DEVICE", "cpu")
 
 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
