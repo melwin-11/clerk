@@ -12,6 +12,7 @@ from config import (
     ollama_num_ctx,
     ollama_num_gpu,
     ollama_temperature,
+    rag_embedding_device,
     sqlite_db_path,
 )
 from database import load_all_embeddings
@@ -22,6 +23,7 @@ class RAGEngine:
         self,
         db_path: str = sqlite_db_path,
         embedding_model_name: str = embedding_model_name,
+        embedding_device: str = rag_embedding_device,
         ollama_host: str = ollama_host,
         ollama_model: str = ollama_model,
         num_gpu: Optional[int] = ollama_num_gpu,
@@ -30,13 +32,13 @@ class RAGEngine:
     ):
         self.db_path = db_path
         self.embedding_model_name = embedding_model_name
+        self.device = embedding_device
         self.ollama_host = ollama_host
         self.ollama_model = ollama_model
         self.num_gpu = num_gpu
         self.num_ctx = num_ctx
         self.temperature = temperature
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"[INFO] Initializing RAG Embedding Model ({self.embedding_model_name}) on {self.device}...")
         self.embedding_model = SentenceTransformer(
             model_name_or_path=self.embedding_model_name,
