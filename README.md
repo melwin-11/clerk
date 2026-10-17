@@ -6,6 +6,10 @@
   </div>
 </div>
 
+## Demo 
+![Demo Video](./data/demo/demo.gif)
+
+
 ## Motivation
 
 - I was curious about how Retrieval-Augmented Generation (RAG) systems work and wanted to implement one from scratch, given my background in Computer Science with a specialization in AI.
