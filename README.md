@@ -7,7 +7,7 @@
 </div>
 
 ## Demo 
-![Demo Video](./data/demo/demo.gif)
+![Demo Video](./data/demo/demo.webp)
 
 
 ## Motivation
