@@ -69,8 +69,9 @@ class ClerkDiscordBot(discord.Client):
         self.target_channel_id = int(target_channel_id) if target_channel_id else None
         self.active_sessions: Set[int] = set()
         # Tracks recently processed message IDs to prevent duplicate responses
-        # when multiple bot instances are accidentally started
         self._processed_ids: Set[int] = set()
+        # Tracks users currently awaiting an answer to prevent concurrent duplicate queries
+        self._busy_users: Set[int] = set()
 
     async def on_ready(self):
         print(f"[INFO] Discord bot logged in as {self.user} (ID: {self.user.id})")
@@ -87,7 +88,7 @@ class ClerkDiscordBot(discord.Client):
         query_text: str,
         result: Dict[str, any],
     ):
-        """Formats the RAG answer and source citations, sending them in safe chunks."""
+        """Formats the RAG answer and source citations without emojis, sending in safe chunks."""
         answer = result.get("answer", "No answer generated.")
         context_items = result.get("context_items", [])
 
@@ -97,15 +98,15 @@ class ClerkDiscordBot(discord.Client):
             for item in context_items[:3]:
                 page = item.get("page_number", "?")
                 score = item.get("score", 0.0)
-                sources_lines.append(f"• **Page {page}** (relevance score: `{score:.3f}`)")
-            sources_text = "\n\n📚 **Sources from document:**\n" + "\n".join(sources_lines)
+                sources_lines.append(f"- Page {page} (relevance score: `{score:.3f}`)")
+            sources_text = "\n\n**Sources from document:**\n" + "\n".join(sources_lines)
 
         full_reply = (
             f"**Query**: *{query_text}*\n\n"
-            f"🤖 **Answer**:\n{answer}"
+            f"**Answer**:\n{answer}"
             f"{sources_text}\n\n"
-            f"─" * 20 + "\n"
-            f"💡 *Session active. Ask your next question, or type `/stop` to end the session.*"
+            f"--------------------\n"
+            f"*Session active. Ask your next question, or type `/stop` to end the session.*"
         )
 
         chunks = split_message_for_discord(full_reply)
@@ -134,26 +135,27 @@ class ClerkDiscordBot(discord.Client):
         if content.lower() == "/stop":
             if user_id in self.active_sessions:
                 self.active_sessions.remove(user_id)
+                self._busy_users.discard(user_id)
                 await message.channel.send(
-                    f"👋 Session ended for {message.author.mention}. Type `/query <your question>` whenever you want to ask another question."
+                    f"Session ended for {message.author.mention}. Type `/query <your question>` whenever you want to ask another question."
                 )
             else:
                 await message.channel.send(
-                    f"ℹ️ {message.author.mention}, you do not have an active session. Type `/query <your question>` to start."
+                    f"{message.author.mention}, you do not have an active session. Type `/query <your question>` to start."
                 )
             return
 
         if content.lower() in ("/status", "/help"):
             doc_count = len(self.rag_engine.chunks_meta)
             await message.channel.send(
-                f"ℹ️ **Clerk Local-RAG Status**\n"
-                f"• Model: `{self.rag_engine.ollama_model}`\n"
-                f"• Embedding: `{self.rag_engine.embedding_model_name}`\n"
-                f"• Chunks Loaded: `{doc_count}`\n"
-                f"• Active Session: `{'Yes' if user_id in self.active_sessions else 'No'}`\n\n"
+                f"**Clerk Local-RAG Status**\n"
+                f"- Model: `{self.rag_engine.ollama_model}`\n"
+                f"- Embedding: `{self.rag_engine.embedding_model_name}`\n"
+                f"- Chunks Loaded: `{doc_count}`\n"
+                f"- Active Session: `{'Yes' if user_id in self.active_sessions else 'No'}`\n\n"
                 f"**Usage**:\n"
-                f"• `/query <question>` - Ask a question or start conversation\n"
-                f"• `/stop` - End active session"
+                f"- `/query <question>` - Ask a question or start conversation\n"
+                f"- `/stop` - End active session"
             )
             return
 
@@ -163,42 +165,54 @@ class ClerkDiscordBot(discord.Client):
 
             if not query_prompt:
                 await message.channel.send(
-                    f"✅ **Session started for {message.author.mention}!**\n"
+                    f"**Session started for {message.author.mention}!**\n"
                     f"Please ask your question regarding the document. Type `/stop` anytime to conclude."
                 )
                 return
 
-            async with message.channel.typing():
-                loop = asyncio.get_running_loop()
-                try:
+            if user_id in self._busy_users:
+                return
+
+            self._busy_users.add(user_id)
+            try:
+                async with message.channel.typing():
+                    loop = asyncio.get_running_loop()
                     rag_result = await loop.run_in_executor(
                         None, self.rag_engine.query, query_prompt
                     )
                     await self.send_formatted_response(
                         message.channel, query_prompt, rag_result
                     )
-                except Exception as e:
-                    print(f"[ERROR] Failed to process query '{query_prompt}': {e}")
-                    await message.channel.send(
-                        f"⚠️ Sorry {message.author.mention}, an error occurred while generating the answer: `{e}`"
-                    )
+            except Exception as e:
+                print(f"[ERROR] Failed to process query '{query_prompt}': {e}")
+                await message.channel.send(
+                    f"Sorry {message.author.mention}, an error occurred while generating the answer: `{e}`"
+                )
+            finally:
+                self._busy_users.discard(user_id)
             return
 
         if user_id in self.active_sessions:
-            async with message.channel.typing():
-                loop = asyncio.get_running_loop()
-                try:
+            if user_id in self._busy_users:
+                return
+
+            self._busy_users.add(user_id)
+            try:
+                async with message.channel.typing():
+                    loop = asyncio.get_running_loop()
                     rag_result = await loop.run_in_executor(
                         None, self.rag_engine.query, content
                     )
                     await self.send_formatted_response(
                         message.channel, content, rag_result
                     )
-                except Exception as e:
-                    print(f"[ERROR] Failed to process message '{content}': {e}")
-                    await message.channel.send(
-                        f"⚠️ Sorry {message.author.mention}, an error occurred while generating the answer: `{e}`"
-                    )
+            except Exception as e:
+                print(f"[ERROR] Failed to process message '{content}': {e}")
+                await message.channel.send(
+                    f"Sorry {message.author.mention}, an error occurred while generating the answer: `{e}`"
+                )
+            finally:
+                self._busy_users.discard(user_id)
 
 
 def start_bot(token: str = discord_token, channel_id: str = discord_channel_id):
